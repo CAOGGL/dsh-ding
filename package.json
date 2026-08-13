@@ -1,0 +1,27 @@
+{
+  "name": "dsh-ding",
+  "version": "0.1.0",
+  "description": "DSH 宿主插件：对话完成（Agent 回到 idle）时播放提示音并弹出 Windows 通知",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "notify.ps1",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "notification",
+    "windows",
+    "toast"
+  ],
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CAOGGL/dsh-ding.git"
+  }
+}

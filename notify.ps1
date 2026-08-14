@@ -8,7 +8,8 @@ param(
     [string]$SoundFile = "",
     [double]$Volume = 1.0,
     [switch]$NoSound,
-    [switch]$NoToast
+    [switch]$NoToast,
+    [switch]$SoundOnly   # 仅播放提示音（试听用），不弹任何通知
 )
 
 # 音量钳制到 0.0~1.0
@@ -72,6 +73,9 @@ public static extern int mciSendString(string command, System.Text.StringBuilder
         } catch { }
     }
 }
+
+# ---------- 1.5) 试听模式：只出声，立即退出 ----------
+if ($SoundOnly) { exit 0 }
 
 # ---------- 2) Windows 通知 ----------
 if (-not $NoToast) {

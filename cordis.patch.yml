@@ -4,6 +4,8 @@
 - insert:
     - id: dsh-ding
       name: 'dsh-ding'
+      # 声明对 webServer 服务的依赖：确保 HTTP 控制面路由挂载时 webServer 已就绪
+      inject: ['webServer']
       config:
         sound: true
         balloon: true

@@ -15,6 +15,7 @@ A DSH host plugin that **notifies you when a conversation finishes**: whenever t
 - 🔔 **提示音**：对话完成后播放提示音——默认使用 `ding.mp3`（可配置任意音频文件：mp3/wav/mid/wma/aac），找不到时回退系统"叮咚"双音
 - 🪟 **Windows 原生通知**：弹出系统原生 Toast（含会话标题、DSH 蓝鲸图标）。首次使用时自动注册 AppUserModelID（开始菜单快捷方式），确保通知真正显示——未注册的 AUMID 会被 Windows 静默丢弃
 - 🎚️ **音量可调**：`volume` 配置项（0.0 ~ 1.0）控制提示音大小，改配置即时生效
+- 🔔 **Web 铃铛按钮**：对话页顶栏有个铃铛——**单击**开关提示音、**悬停**拖音量滑杆（松手自动试听）、**右键**选择音效并可上传自己的音频文件；设置即时保存，无需改配置
 - 🎯 **时机精准**：订阅宿主事件 `agent/status`，状态从 `running` 变为 `idle` 时触发——这正是"整轮对话彻底结束、不会再主动输出"的时刻
 - 🧹 **不误报**：自动跳过子代理（subagent）的完成事件（那只是主对话的中间过程）；跳过 inbox 仍有待处理消息的空闲（马上会继续）
 - ⚡ **防抖节流**：默认 800ms 防抖 + 3s 全局节流，避免连发
@@ -45,6 +46,7 @@ dsh plugin --profile web add github:CAOGGL/dsh-ding
 - insert:
     - id: dsh-ding
       name: 'dsh-ding'
+      inject: ['webServer']   # 必需：声明对 webServer 的依赖，Web 铃铛 API 才能挂载
       config:
         sound: true
         balloon: true
@@ -89,6 +91,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
         minIntervalMs: 3000
 ```
 
+### Web 铃铛按钮（v0.4.0+）
+
+对话页顶栏右侧的铃铛，全部设置即时保存到 `$DSH_HOME/profiles/<name>/data/dsh-ding.json`（仅覆盖你动过的项，其余仍跟随 `cordis.patch.yml` 配置）：
+
+| 操作 | 效果 |
+| --- | --- |
+| 单击铃铛 | 开/关提示音（通知气泡不受影响） |
+| 悬停铃铛 | 弹出音量滑杆；拖动松手自动试听一次 |
+| 右键铃铛 | 选择音效（内置叮咚 / 已上传的音频），或上传新音效（mp3/wav/mid/wma/aac/m4a/ogg/flac，存到 `data/sounds/`） |
+
 ### 卸载
 
 1. 从 `cordis.patch.yml` 删掉 `dsh-ding` 那一整块
@@ -96,6 +108,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 
 ### 更新日志
 
+- **v0.4.0**（2026-08-14）：**新增 Web 铃铛按钮**——对话页顶栏单击开关提示音、悬停调音量（松手试听）、右键选音效/上传自定义音频；新增 `GET/POST /dsh-ding/settings`、`/dsh-ding/test`、`/dsh-ding/sounds` HTTP API，设置持久化到 `data/dsh-ding.json`
 - **v0.3.1**（2026-08-14）：通知图标改为 DSH 蓝鲸 logo；README 同步安装方法并新增本日志
 - **v0.3.0**（2026-08-14）：**修复原生通知不显示**——自动注册 AppUserModelID（未注册的 AUMID 会被 Windows 静默丢弃）
 - **v0.2.0**（2026-08-14）：bundle 化，支持 `dsh plugin add github:CAOGGL/dsh-ding` 一行安装
@@ -105,7 +118,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 
 - **没有声音？** 检查 `soundFile` 指向的文件是否存在；文件不存在会自动回退系统"叮咚"双音；两者都无声请检查系统音量/静音。
 - **没有通知？** 插件首次使用时会在开始菜单注册 `dsh-ding-notifier` 快捷方式（AppUserModelID 注册，这是 Windows 显示 toast 的前提）。若通知仍不显示，检查 设置 → 系统 → 通知 里 `dsh-ding-notifier` 是否被关闭；WinRT Toast 失败时脚本会自动回退 NotifyIcon 气泡。
-- **想换提示音？** 放一个新音频文件，改 `soundFile` 指向它即可（即时生效）。
+- **想换提示音？** 在对话页铃铛上**右键**即可选/传音效；也可以放一个新音频文件，改 `soundFile` 指向它（即时生效）。
 
 ---
 
@@ -116,6 +129,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 - 🔔 **Sound alert**: plays `ding.mp3` (configurable to any audio file: mp3/wav/mid/wma/aac) when a conversation completes; falls back to the system "ding-dong" beep if the file is missing
 - 🪟 **Native Windows notification**: shows a system toast (including the session title and the DSH whale logo). On first use the plugin registers an AppUserModelID (Start Menu shortcut) so the toast is actually displayed — toasts with an unregistered AUMID are silently dropped by Windows
 - 🎚️ **Adjustable volume**: the `volume` option (0.0 ~ 1.0) controls the alert loudness; config changes apply immediately
+- 🔔 **Web bell button**: a bell in the conversation header — **click** toggles the sound, **hover** shows a volume slider (release to preview), **right-click** picks a sound and lets you upload your own audio files; changes save immediately, no config editing
 - 🎯 **Precise timing**: subscribes to the host `agent/status` event and fires when the status transitions from `running` to `idle` — exactly the moment the turn is fully done with no more proactive output
 - 🧹 **No false positives**: ignores subagent completion events (they are just intermediate steps of the main conversation) and idle states with pending inbox messages (the agent is about to continue)
 - ⚡ **Debounced & throttled**: 800ms debounce and 3s global rate limit by default
@@ -146,6 +160,7 @@ Settings → Plugin Market → search `dsh-ding` → one-click install (listed i
 - insert:
     - id: dsh-ding
       name: 'dsh-ding'
+      inject: ['webServer']   # required: depends on the webServer service so the bell API mounts
       config:
         sound: true
         balloon: true
@@ -190,6 +205,16 @@ Full example:
         minIntervalMs: 3000
 ```
 
+### Web bell button (v0.4.0+)
+
+The bell in the conversation header saves every change immediately to `$DSH_HOME/profiles/<name>/data/dsh-ding.json` (only the fields you touched; everything else still follows `cordis.patch.yml`):
+
+| Action | Effect |
+| --- | --- |
+| Click the bell | Toggle the sound on/off (the notification balloon is unaffected) |
+| Hover the bell | Volume slider appears; releasing the slider previews the sound once |
+| Right-click the bell | Pick a sound (built-in ding / your uploaded files), or upload a new one (mp3/wav/mid/wma/aac/m4a/ogg/flac, stored in `data/sounds/`) |
+
 ### Uninstall
 
 1. Remove the whole `dsh-ding` block from `cordis.patch.yml`
@@ -197,6 +222,7 @@ Full example:
 
 ### Changelog
 
+- **v0.4.0** (2026-08-14): **Web bell button added** — click the bell in the conversation header to toggle the sound, hover for a volume slider (release to preview), right-click to pick/upload sounds; new `GET/POST /dsh-ding/settings`, `/dsh-ding/test`, `/dsh-ding/sounds` HTTP APIs; settings persist to `data/dsh-ding.json`
 - **v0.3.1** (2026-08-14): Toast icon switched to the DSH whale logo; README install methods updated, changelog added
 - **v0.3.0** (2026-08-14): **Fixed native notifications not showing** — auto-registers an AppUserModelID (toasts with an unregistered AUMID are silently dropped by Windows)
 - **v0.2.0** (2026-08-14): Bundled, installable with `dsh plugin add github:CAOGGL/dsh-ding`
@@ -206,7 +232,7 @@ Full example:
 
 - **No sound?** Check that the file pointed to by `soundFile` exists; if it doesn't, the script falls back to the system beep. If both are silent, check your system volume/mute settings.
 - **No notification?** On first use the plugin registers the `dsh-ding-notifier` Start Menu shortcut (AppUserModelID registration — required for Windows to display toasts). If notifications still don't show, check Settings → System → Notifications to make sure `dsh-ding-notifier` is enabled. If the WinRT toast fails, the script falls back to a NotifyIcon balloon automatically.
-- **Want a different sound?** Drop in a new audio file and point `soundFile` to it (takes effect immediately).
+- **Want a different sound?** Right-click the bell in the web UI to pick/upload one; or drop in a new audio file and point `soundFile` to it (takes effect immediately).
 
 ---
 

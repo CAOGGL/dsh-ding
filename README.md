@@ -13,7 +13,7 @@ A DSH host plugin that **notifies you when a conversation finishes**: whenever t
 ### 主要功能
 
 - 🔔 **提示音**：对话完成后播放提示音——默认使用 `ding.mp3`（可配置任意音频文件：mp3/wav/mid/wma/aac），找不到时回退系统"叮咚"双音
-- 🪟 **Windows 原生通知**：弹出系统原生 Toast（含会话标题）。首次使用时自动注册 AppUserModelID（开始菜单快捷方式），确保通知真正显示——未注册的 AUMID 会被 Windows 静默丢弃
+- 🪟 **Windows 原生通知**：弹出系统原生 Toast（含会话标题、DSH 蓝鲸图标）。首次使用时自动注册 AppUserModelID（开始菜单快捷方式），确保通知真正显示——未注册的 AUMID 会被 Windows 静默丢弃
 - 🎚️ **音量可调**：`volume` 配置项（0.0 ~ 1.0）控制提示音大小，改配置即时生效
 - 🎯 **时机精准**：订阅宿主事件 `agent/status`，状态从 `running` 变为 `idle` 时触发——这正是"整轮对话彻底结束、不会再主动输出"的时刻
 - 🧹 **不误报**：自动跳过子代理（subagent）的完成事件（那只是主对话的中间过程）；跳过 inbox 仍有待处理消息的空闲（马上会继续）
@@ -101,7 +101,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 ### Features
 
 - 🔔 **Sound alert**: plays `ding.mp3` (configurable to any audio file: mp3/wav/mid/wma/aac) when a conversation completes; falls back to the system "ding-dong" beep if the file is missing
-- 🪟 **Native Windows notification**: shows a system toast (including the session title). On first use the plugin registers an AppUserModelID (Start Menu shortcut) so the toast is actually displayed — toasts with an unregistered AUMID are silently dropped by Windows
+- 🪟 **Native Windows notification**: shows a system toast (including the session title and the DSH whale logo). On first use the plugin registers an AppUserModelID (Start Menu shortcut) so the toast is actually displayed — toasts with an unregistered AUMID are silently dropped by Windows
 - 🎚️ **Adjustable volume**: the `volume` option (0.0 ~ 1.0) controls the alert loudness; config changes apply immediately
 - 🎯 **Precise timing**: subscribes to the host `agent/status` event and fires when the status transitions from `running` to `idle` — exactly the moment the turn is fully done with no more proactive output
 - 🧹 **No false positives**: ignores subagent completion events (they are just intermediate steps of the main conversation) and idle states with pending inbox messages (the agent is about to continue)

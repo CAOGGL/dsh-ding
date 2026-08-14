@@ -83,11 +83,13 @@ if (-not $NoToast) {
     #     注册方式：开始菜单快捷方式 + System.AppUserModel.ID 属性（首次运行时执行一次）。
     if (-not (Test-Path $lnkPath)) {
         try {
+            $icoPath = Join-Path $PSScriptRoot '..\ds.ico'
             $ws = New-Object -ComObject WScript.Shell
             $sc = $ws.CreateShortcut($lnkPath)
             $sc.TargetPath = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
             $sc.Arguments = '-NoProfile -WindowStyle Hidden -Command exit'
             $sc.WorkingDirectory = $env:WINDIR
+            if (Test-Path $icoPath) { $sc.IconLocation = "$icoPath, 0" }
             $sc.Save()
             Add-Type -TypeDefinition @'
 using System;

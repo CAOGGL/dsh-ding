@@ -24,7 +24,19 @@ A DSH host plugin that **notifies you when a conversation finishes**: whenever t
 
 `$DSH_HOME` 默认为 `~/.dsh`。
 
-**方法 A：手动放置（最简单）**
+**方法 A：一行命令（推荐，bundle 安装）**
+
+```bash
+dsh plugin --profile web add github:CAOGGL/dsh-ding
+```
+
+装完**重启 `dsh web`** 生效（依赖 pnpm，`npm install -g pnpm` 即可）。本插件也支持 insert 行挂载（改配置即时生效），见方法 C。
+
+**方法 B：插件市场**
+
+设置 → 插件市场 → 搜索 `dsh-ding` → 一键安装（已收录于 awesome-dsh-plugin，市场目录每日刷新后出现）。
+
+**方法 C：手动放置（无需 pnpm）**
 
 1. 把本仓库克隆（或下载）到：`$DSH_HOME/profiles/node_modules/dsh-ding/`
 2. 在 profile 的用户补丁 `$DSH_HOME/profiles/web/cordis.patch.yml`（其他 profile 同理）追加：
@@ -40,13 +52,7 @@ A DSH host plugin that **notifies you when a conversation finishes**: whenever t
 
 3. 保存即生效（补丁文件是热监控的）；插件代码本身的改动需要重启服务才生效。
 
-**方法 B：pnpm 安装**
-
-```bash
-dsh plugin --profile web add git+https://github.com/CAOGGL/dsh-ding.git
-```
-
-然后在 `cordis.patch.yml` 里注册上面的 insert 行。
+> npm（`dsh plugin --profile web add dsh-ding`）：即将上线，上线后安装更快。
 
 **验证**：对话完成后应听到提示音并看到通知；也可以先单独测试通知脚本：
 
@@ -88,6 +94,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 1. 从 `cordis.patch.yml` 删掉 `dsh-ding` 那一整块
 2. 删除 `$DSH_HOME/profiles/node_modules/dsh-ding/` 目录
 
+### 更新日志
+
+- **v0.3.1**（2026-08-14）：通知图标改为 DSH 蓝鲸 logo；README 同步安装方法并新增本日志
+- **v0.3.0**（2026-08-14）：**修复原生通知不显示**——自动注册 AppUserModelID（未注册的 AUMID 会被 Windows 静默丢弃）
+- **v0.2.0**（2026-08-14）：bundle 化，支持 `dsh plugin add github:CAOGGL/dsh-ding` 一行安装
+- **v0.1.0**（2026-08-14）：首版——对话完成播放提示音 + Windows 通知；支持 soundFile / volume / 防抖节流 / 跳过子代理
+
 ### 常见问题
 
 - **没有声音？** 检查 `soundFile` 指向的文件是否存在；文件不存在会自动回退系统"叮咚"双音；两者都无声请检查系统音量/静音。
@@ -112,7 +125,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 
 `$DSH_HOME` defaults to `~/.dsh`.
 
-**Method A: manual placement (simplest)**
+**Method A: one-line install (recommended, bundle)**
+
+```bash
+dsh plugin --profile web add github:CAOGGL/dsh-ding
+```
+
+Then **restart `dsh web`** (requires pnpm — `npm install -g pnpm`). The plugin also supports insert-row mounting with live config reload (see Method C).
+
+**Method B: plugin market**
+
+Settings → Plugin Market → search `dsh-ding` → one-click install (listed in awesome-dsh-plugin; the market catalog refreshes daily).
+
+**Method C: manual placement (no pnpm needed)**
 
 1. Clone (or download) this repo to: `$DSH_HOME/profiles/node_modules/dsh-ding/`
 2. Append to your profile's user patch file `$DSH_HOME/profiles/web/cordis.patch.yml` (same for other profiles):
@@ -128,13 +153,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 
 3. It takes effect immediately on save (the patch file is hot-watched). Changes to the plugin code itself require a service restart.
 
-**Method B: pnpm**
-
-```bash
-dsh plugin --profile web add git+https://github.com/CAOGGL/dsh-ding.git
-```
-
-Then register the insert block above in `cordis.patch.yml`.
+> npm (`dsh plugin --profile web add dsh-ding`): coming soon — faster installs once published.
 
 **Verification**: finish a conversation and you should hear the sound and see the notification. You can also test the notification script standalone:
 
@@ -175,6 +194,13 @@ Full example:
 
 1. Remove the whole `dsh-ding` block from `cordis.patch.yml`
 2. Delete the `$DSH_HOME/profiles/node_modules/dsh-ding/` directory
+
+### Changelog
+
+- **v0.3.1** (2026-08-14): Toast icon switched to the DSH whale logo; README install methods updated, changelog added
+- **v0.3.0** (2026-08-14): **Fixed native notifications not showing** — auto-registers an AppUserModelID (toasts with an unregistered AUMID are silently dropped by Windows)
+- **v0.2.0** (2026-08-14): Bundled, installable with `dsh plugin add github:CAOGGL/dsh-ding`
+- **v0.1.0** (2026-08-14): Initial release — sound + Windows notification when a conversation finishes; supports soundFile / volume / debounce & throttle / skip-subagents
 
 ### FAQ
 

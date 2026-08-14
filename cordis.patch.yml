@@ -1,0 +1,12 @@
+# dsh-ding bundle patch layer — installed automatically when this package is
+# added as a bundle (dsh plugin --profile web add dsh-ding / github:CAOGGL/dsh-ding).
+# Users can override any of these in their profile's own cordis.patch.yml.
+- insert:
+    - id: dsh-ding
+      name: 'dsh-ding'
+      config:
+        sound: true
+        balloon: true
+        title: 'DSH 完成'
+        debounceMs: 800
+        minIntervalMs: 3000

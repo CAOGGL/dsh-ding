@@ -1,6 +1,6 @@
 {
   "name": "dsh-ding",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "DSH 宿主插件：对话完成（Agent 回到 idle）时播放提示音并弹出 Windows 通知",
   "type": "module",
   "main": "lib/index.js",

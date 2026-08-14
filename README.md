@@ -13,7 +13,8 @@ A DSH host plugin that **notifies you when a conversation finishes**: whenever t
 ### 主要功能
 
 - 🔔 **提示音**：对话完成后播放提示音——默认使用 `ding.mp3`（可配置任意音频文件：mp3/wav/mid/wma/aac），找不到时回退系统"叮咚"双音
-- 🪟 **Windows 通知**：同时弹出系统原生通知（优先 WinRT Toast，失败自动回退经典气泡通知），会显示会话标题
+- 🪟 **Windows 原生通知**：弹出系统原生 Toast（含会话标题）。首次使用时自动注册 AppUserModelID（开始菜单快捷方式），确保通知真正显示——未注册的 AUMID 会被 Windows 静默丢弃
+- 🎚️ **音量可调**：`volume` 配置项（0.0 ~ 1.0）控制提示音大小，改配置即时生效
 - 🎯 **时机精准**：订阅宿主事件 `agent/status`，状态从 `running` 变为 `idle` 时触发——这正是"整轮对话彻底结束、不会再主动输出"的时刻
 - 🧹 **不误报**：自动跳过子代理（subagent）的完成事件（那只是主对话的中间过程）；跳过 inbox 仍有待处理消息的空闲（马上会继续）
 - ⚡ **防抖节流**：默认 800ms 防抖 + 3s 全局节流，避免连发
@@ -90,7 +91,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 ### 常见问题
 
 - **没有声音？** 检查 `soundFile` 指向的文件是否存在；文件不存在会自动回退系统"叮咚"双音；两者都无声请检查系统音量/静音。
-- **没有通知？** WinRT Toast 失败会自动回退 NotifyIcon 气泡；两者都失败通常与系统通知设置有关，可在 设置 → 系统 → 通知 里检查。
+- **没有通知？** 插件首次使用时会在开始菜单注册 `dsh-ding-notifier` 快捷方式（AppUserModelID 注册，这是 Windows 显示 toast 的前提）。若通知仍不显示，检查 设置 → 系统 → 通知 里 `dsh-ding-notifier` 是否被关闭；WinRT Toast 失败时脚本会自动回退 NotifyIcon 气泡。
 - **想换提示音？** 放一个新音频文件，改 `soundFile` 指向它即可（即时生效）。
 
 ---
@@ -100,7 +101,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 ### Features
 
 - 🔔 **Sound alert**: plays `ding.mp3` (configurable to any audio file: mp3/wav/mid/wma/aac) when a conversation completes; falls back to the system "ding-dong" beep if the file is missing
-- 🪟 **Windows notification**: shows a native notification (WinRT Toast first, classic balloon as fallback), including the session title
+- 🪟 **Native Windows notification**: shows a system toast (including the session title). On first use the plugin registers an AppUserModelID (Start Menu shortcut) so the toast is actually displayed — toasts with an unregistered AUMID are silently dropped by Windows
+- 🎚️ **Adjustable volume**: the `volume` option (0.0 ~ 1.0) controls the alert loudness; config changes apply immediately
 - 🎯 **Precise timing**: subscribes to the host `agent/status` event and fires when the status transitions from `running` to `idle` — exactly the moment the turn is fully done with no more proactive output
 - 🧹 **No false positives**: ignores subagent completion events (they are just intermediate steps of the main conversation) and idle states with pending inbox messages (the agent is about to continue)
 - ⚡ **Debounced & throttled**: 800ms debounce and 3s global rate limit by default
@@ -177,7 +179,7 @@ Full example:
 ### FAQ
 
 - **No sound?** Check that the file pointed to by `soundFile` exists; if it doesn't, the script falls back to the system beep. If both are silent, check your system volume/mute settings.
-- **No notification?** WinRT Toast failures automatically fall back to the NotifyIcon balloon. If both fail, check Settings → System → Notifications.
+- **No notification?** On first use the plugin registers the `dsh-ding-notifier` Start Menu shortcut (AppUserModelID registration — required for Windows to display toasts). If notifications still don't show, check Settings → System → Notifications to make sure `dsh-ding-notifier` is enabled. If the WinRT toast fails, the script falls back to a NotifyIcon balloon automatically.
 - **Want a different sound?** Drop in a new audio file and point `soundFile` to it (takes effect immediately).
 
 ---

@@ -108,6 +108,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 
 ### 更新日志
 
+- **v0.4.4**（2026-08-14）：**松手立即试听**——新增 `GET /dsh-ding/audio` 路由，浏览器直接用 HTMLAudio 播放音效（不再等 PowerShell 启动）；宿主端对"内置叮咚"做与 notify.ps1 相同的 ding.mp3 兜底解析。音量条改版：百分比数字移到滑杆**右侧同一行**、滑杆与铃铛按钮**同高（30px）垂直对齐**、滑杆左右留白使轨道圆角不被按钮遮挡
 - **v0.4.3**（2026-08-14）：滑杆旋钮改为**亮色黑球 / 暗色白球**（跟随 WebUI 主题实时切换）；移除音量条标题行；菜单文案改为跟随 **WebUI 语言设置**（`ctx.locale`，切换语言即时生效，不再是页面 lang）
 - **v0.4.2**（2026-08-14）：**滑杆与右键菜单改用 WebUI 设计令牌**（`--dsw-alias-*`）——自定义滑杆：4px 圆角轨道 + 品牌色填充 + 主题化旋钮（悬停/按压放大）；菜单表面/边框/阴影/文字/悬停/选中色全部对齐 WebUI 弹层样式（`--dsw-specific-menu` / `--dsw-shadow-lv3`），自动适配明暗主题
 - **v0.4.1**（2026-08-14）：铃铛交互改版——音量条移至铃铛正左侧（行内宽度动画、同行元素自动左移）；右键设置面板新增**提示音/气泡通知开关**（全关 = 无任何提示）；弹层增加过渡动画；修复悬停时菜单被误关的问题
@@ -225,6 +226,7 @@ The bell in the conversation header saves every change immediately to `$DSH_HOME
 
 ### Changelog
 
+- **v0.4.4** (2026-08-14): **Instant preview on release** — new `GET /dsh-ding/audio` route lets the browser play the sound directly via HTMLAudio (no more PowerShell startup wait); the host resolves `ding.mp3` for the built-in sound exactly like notify.ps1 does. Volume bar redesign: the percentage moved to the **same row, right of the slider**, the slider is now **aligned with the bell button (30px)**, and horizontal padding keeps the track's rounded ends clear of the button
 - **v0.4.3** (2026-08-14): Slider knob is now **black in light mode / white in dark mode** (follows the WebUI theme live); the volume-bar title row was removed; the menu copy now follows the **WebUI language setting** (`ctx.locale`, switches instantly, no longer tied to the page lang)
 - **v0.4.2** (2026-08-14): **Slider and right-click menu restyled with WebUI design tokens** (`--dsw-alias-*`) — custom slider: 4px rounded track, brand-colored fill, themed knob (grows on hover/press); the menu surface/border/shadow/text/hover/active colors now match the WebUI popover style (`--dsw-specific-menu` / `--dsw-shadow-lv3`) and adapt to light/dark themes automatically
 - **v0.4.1** (2026-08-14): Bell interaction redesign — the volume bar moved to the left of the bell (in-flow width animation, row items shift left); the right-click panel gained **Sound/Toast toggles** (both off = completely silent); popups got transition animations; fixed the hover menu closing too early

@@ -59,6 +59,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 | --- | --- | --- |
 | `sound` | `true` | 播放提示音 |
 | `soundFile` | 空 | 提示音文件路径（mp3/wav/mid/wma/aac）。留空时自动在 服务器工作目录 / 插件目录 / 用户主目录 找 `ding.mp3`，找不到则回退系统"叮咚"双音 |
+| `volume` | `1.0` | 提示音音量（0.0 ~ 1.0，1.0 为原始音量，如 `0.5` 即一半音量） |
 | `balloon` | `true` | 显示 Windows 通知 |
 | `title` | `DSH 完成` | 通知标题 |
 | `debounceMs` | `800` | 状态防抖毫秒数 |
@@ -74,6 +75,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
       config:
         sound: true
         soundFile: 'C:\codewhale\ding.mp3'
+        volume: 0.8
         balloon: true
         title: 'DSH 完成'
         debounceMs: 800
@@ -144,6 +146,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 | --- | --- | --- |
 | `sound` | `true` | Play the alert sound |
 | `soundFile` | empty | Path to the sound file (mp3/wav/mid/wma/aac). When empty, the script looks for `ding.mp3` in the server working directory / plugin directory / user home; falls back to the system beep if not found |
+| `volume` | `1.0` | Alert sound volume (0.0 ~ 1.0; `1.0` = original volume, e.g. `0.5` = half volume) |
 | `balloon` | `true` | Show the Windows notification |
 | `title` | `DSH 完成` | Notification title |
 | `debounceMs` | `800` | Status debounce in ms |
@@ -159,6 +162,7 @@ Full example:
       config:
         sound: true
         soundFile: 'C:\codewhale\ding.mp3'
+        volume: 0.8
         balloon: true
         title: 'DSH 完成'
         debounceMs: 800

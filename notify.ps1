@@ -1,13 +1,18 @@
 ﻿# notify.ps1 — dsh-ding 的通知脚本：提示音 + Windows 原生通知
 # 由 dsh-ding 插件以隐藏窗口方式调用。
 # -SoundFile 指定提示音文件（mp3/wav 等）；不指定时自动在常见位置找 ding.mp3。
+# -Volume 指定音量 0.0~1.0（默认 1.0 = 原始音量）。
 param(
     [string]$Title = "DSH 完成",
     [string]$Text  = "对话已完成",
     [string]$SoundFile = "",
+    [double]$Volume = 1.0,
     [switch]$NoSound,
     [switch]$NoToast
 )
+
+# 音量钳制到 0.0~1.0
+$Volume = [Math]::Max(0.0, [Math]::Min(1.0, $Volume))
 
 # ---------- 定位提示音文件 ----------
 function Resolve-SoundFile {
@@ -46,6 +51,10 @@ public static extern int mciSendString(string command, System.Text.StringBuilder
             $sb = New-Object System.Text.StringBuilder 256
             $quoted = '"' + $soundPath.Replace('"', '""') + '"'
             [Dsh.Mci]::mciSendString("open $quoted type $mciType alias dshding", $sb, 256, [IntPtr]::Zero) | Out-Null
+            if ($Volume -lt 1.0) {
+                # MCI 音量范围 0~1000；设置失败（不支持的驱动）时忽略，保持原始音量
+                [Dsh.Mci]::mciSendString("setaudio dshding volume to $([int]($Volume * 1000))", $sb, 256, [IntPtr]::Zero) | Out-Null
+            }
             [Dsh.Mci]::mciSendString("play dshding wait", $sb, 256, [IntPtr]::Zero) | Out-Null
             [Dsh.Mci]::mciSendString("close dshding", $sb, 256, [IntPtr]::Zero) | Out-Null
             $played = $true

@@ -1,6 +1,6 @@
 {
   "name": "dsh-ding",
-  "version": "0.4.4",
+  "version": "1.0.0",
   "description": "DSH 插件：对话完成时播放提示音 + Windows 通知，WebUI 铃铛按钮可调开关/音量/音效",
   "type": "module",
   "main": "lib/index.js",
@@ -13,6 +13,7 @@
   "files": [
     "lib",
     "notify.ps1",
+    "toast-activate.ps1",
     "cordis.patch.yml",
     "ds.ico",
     "ds-logo.svg",

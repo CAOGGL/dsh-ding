@@ -9,11 +9,23 @@ param(
     [double]$Volume = 1.0,
     [switch]$NoSound,
     [switch]$NoToast,
-    [switch]$SoundOnly   # 仅播放提示音（试听用），不弹任何通知
+    [switch]$SoundOnly,   # 仅播放提示音（试听用），不弹任何通知
+    [string]$SessionId = "",  # 完成/运行中的会话 id：通知点击后跳转到该会话
+    [string]$BaseUrl = ""     # WebUI 地址（如 http://127.0.0.1:3080）
 )
 
 # 音量钳制到 0.0~1.0
 $Volume = [Math]::Max(0.0, [Math]::Min(1.0, $Volume))
+
+# 诊断日志（每次运行记录各环节成败，排查用；TEMP 下，写失败不影响功能）
+$logPath = Join-Path $env:TEMP 'dsh-ding-notify.log'
+function Write-DingLog {
+    param([string]$Message)
+    try {
+        Add-Content -LiteralPath $logPath -Value ("[{0}] {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Message) -ErrorAction Stop
+    } catch { }
+}
+Write-DingLog ("run: title=[{0}] text=[{1}] soundOnly={2} noSound={3} noToast={4} session=[{5}] base=[{6}]" -f $Title, $Text, $SoundOnly.IsPresent, $NoSound.IsPresent, $NoToast.IsPresent, $SessionId, $BaseUrl)
 
 # ---------- 定位提示音文件 ----------
 function Resolve-SoundFile {
@@ -59,7 +71,9 @@ public static extern int mciSendString(string command, System.Text.StringBuilder
             [Dsh.Mci]::mciSendString("play dshding wait", $sb, 256, [IntPtr]::Zero) | Out-Null
             [Dsh.Mci]::mciSendString("close dshding", $sb, 256, [IntPtr]::Zero) | Out-Null
             $played = $true
+            Write-DingLog "sound: MCI played $soundPath (vol=$Volume)"
         } catch {
+            Write-DingLog ("sound: MCI failed: " + $_.Exception.Message)
             try { [Dsh.Mci]::mciSendString("close dshding", $null, 0, [IntPtr]::Zero) | Out-Null } catch { }
         }
     }
@@ -70,6 +84,7 @@ public static extern int mciSendString(string command, System.Text.StringBuilder
             [Console]::Beep(880, 180)
             Start-Sleep -Milliseconds 60
             [Console]::Beep(1174, 260)
+            Write-DingLog "sound: fallback beep played"
         } catch { }
     }
 }
@@ -84,17 +99,27 @@ if (-not $NoToast) {
     $lnkPath = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\dsh-ding-notifier.lnk'
 
     # 2a) 确保 AUMID 已注册：未注册的 appId 会被 Windows 静默丢弃（toast 调用了也不显示）。
-    #     注册方式：开始菜单快捷方式 + System.AppUserModel.ID 属性（首次运行时执行一次）。
-    if (-not (Test-Path $lnkPath)) {
-        try {
-            $icoPath = Join-Path $PSScriptRoot '..\ds.ico'
-            $ws = New-Object -ComObject WScript.Shell
-            $sc = $ws.CreateShortcut($lnkPath)
-            $sc.TargetPath = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
-            $sc.Arguments = '-NoProfile -WindowStyle Hidden -Command exit'
-            $sc.WorkingDirectory = $env:WINDIR
-            if (Test-Path $icoPath) { $sc.IconLocation = "$icoPath, 0" }
-            $sc.Save()
+    #     注册方式：开始菜单快捷方式 + System.AppUserModel.ID 属性。
+    #     快捷方式 Target 必须是 toast-activate.ps1：非打包 AUMID 的 toast 点击时，
+    #     Windows 会把 launch 参数作为命令行参数追加给快捷方式 Target
+    #     （协议激活只对打包应用生效，所以不能只靠 2a2 的协议注册）。
+    $activateScript = Join-Path $PSScriptRoot 'toast-activate.ps1'
+    $lnkExists = Test-Path $lnkPath
+    try {
+        $icoPath = Join-Path $PSScriptRoot '..\ds.ico'
+        $ws = New-Object -ComObject WScript.Shell
+        $sc = $ws.CreateShortcut($lnkPath)
+        $sc.TargetPath = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"
+        $expectedArgs = '-NoProfile -WindowStyle Hidden -File "' + $activateScript + '"'
+        $needAumid = -not $lnkExists
+        if ($sc.Arguments -ne $expectedArgs) {
+            $sc.Arguments = $expectedArgs
+            $needAumid = $true  # Arguments 被改过，AUMID 属性可能也随之丢失，重写保险
+        }
+        $sc.WorkingDirectory = $env:WINDIR
+        if (Test-Path $icoPath) { $sc.IconLocation = "$icoPath, 0" }
+        $sc.Save()
+        if ($needAumid) {
             Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -142,25 +167,63 @@ public static class DshDingAumid {
 }
 '@ -ErrorAction Stop
             [DshDingAumid]::Set($lnkPath, $AUMID)
+        }
+    } catch { }
+
+    # 2a2) 注册 dsh-ding:// 协议（HKCU，无需管理员）：手动打开 dsh-ding:// 链接时的入口，
+    #      同样路由到 toast-activate.ps1（toast 点击本身不走协议，走 2a 的快捷方式传参）。
+    if (Test-Path -LiteralPath $activateScript) {
+        try {
+            $protoKey = 'HKCU:\Software\Classes\dsh-ding'
+            if (-not (Test-Path $protoKey)) { New-Item -Path $protoKey -Force | Out-Null }
+            $cmdKey = "$protoKey\shell\open\command"
+            if (-not (Test-Path $cmdKey)) { New-Item -Path $cmdKey -Force | Out-Null }
+            $cmd = '"' + $env:WINDIR + '\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -WindowStyle Hidden -File "' + $activateScript + '" "%1"'
+            Set-ItemProperty -Path $cmdKey -Name '(Default)' -Value $cmd
         } catch { }
     }
 
-    # 2b) 首选：WinRT 原生 Toast（使用已注册的 AUMID；注册失败则退回无 AUMID）
+    # 通知点击跳转目标：BaseUrl + dingOpen=<base64url(sessionId)>
+    # （浏览器端插件解析该参数后 sessions.open() 直达会话）
+    $jumpB64 = ''
+    $jumpUrl = ''
+    if ($SessionId -and $BaseUrl) {
+        try {
+            $jumpB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($SessionId)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+            $jumpUrl = $BaseUrl.TrimEnd('/') + '/?dingOpen=' + $jumpB64
+        } catch { }
+    }
+
+    # 2b) 首选：WinRT 原生 Toast（使用已注册的 AUMID；注册失败则退回无 AUMID）。
+    #     launch 属性 = dsh-ding://open/<u>/<b>（u/b 为 base64url，路径形式无 & ? 空格等
+    #     命令行特殊字符；点击 toast 时 Windows 把它作为参数传给快捷方式 Target）。
+    #     XML 里也要保证没有非法字符（& 等），否则 LoadXml 失败 → toast 静默不显示。
     try {
         $escapedTitle = $Title.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
         $escapedText  = $Text.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
         [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
         [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
         $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-        $xml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
+        if ($jumpUrl) {
+            $baseB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($BaseUrl.TrimEnd('/'))).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+            $launch = 'dsh-ding://open/' + $jumpB64 + '/' + $baseB64
+            $launchXml = $launch.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
+            $xml.LoadXml("<toast launch='$launchXml'><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
+        } else {
+            $xml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
+        }
         $toast = New-Object Windows.UI.Notifications.ToastNotification -ArgumentList $xml
         $appId = if (Test-Path $lnkPath) { $AUMID } else { 'dsh-ding' }
         [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show($toast)
         $shown = $true
+        Write-DingLog "toast: shown via $appId"
         Start-Sleep -Seconds 3
-    } catch { }
+    } catch {
+        Write-DingLog ("toast: FAILED: " + $_.Exception.Message)
+    }
 
-    # 2c) 兜底：经典气泡通知（NotifyIcon，通知区域 + 操作中心）
+    # 2c) 兜底：经典气泡通知（NotifyIcon，通知区域 + 操作中心）。
+    #     点击气泡跳转到对应会话（BalloonTipClicked 事件）。
     if (-not $shown) {
         try {
             Add-Type -AssemblyName System.Windows.Forms
@@ -171,6 +234,16 @@ public static class DshDingAumid {
             $notify.BalloonTipTitle = $Title
             $notify.BalloonTipText = $Text
             $notify.BalloonTipIcon = [System.Windows.Forms.ToolTipIcon]::Info
+            if ($jumpUrl) {
+                # 点击跳转注册放独立 try：注册失败不能连累气泡本身显示
+                try {
+                    $script:dingJumpUrl = $jumpUrl
+                    $notify.add_BalloonTipClicked([System.Windows.Forms.EventHandler]{
+                        param($sender, $eventArgs)
+                        if ($script:dingJumpUrl) { Start-Process $script:dingJumpUrl }
+                    })
+                } catch { }
+            }
             $notify.ShowBalloonTip(6000)
             $end = [DateTime]::UtcNow.AddSeconds(12)
             while ([DateTime]::UtcNow -lt $end) {
@@ -180,8 +253,16 @@ public static class DshDingAumid {
             $notify.Visible = $false
             $notify.Dispose()
             $shown = $true
-        } catch { }
+            Write-DingLog "balloon: shown via NotifyIcon"
+        } catch {
+            Write-DingLog ("balloon: FAILED: " + $_.Exception.Message)
+        }
     }
 
-    if (-not $shown) { Start-Sleep -Seconds 1 }
+    if (-not $shown) {
+        Write-DingLog "notify: NOTHING shown (all paths failed)"
+        Start-Sleep -Seconds 1
+    } else {
+        Write-DingLog "notify: done"
+    }
 }

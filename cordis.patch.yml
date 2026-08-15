@@ -10,5 +10,15 @@
         sound: true
         balloon: true
         title: 'DSH 完成'
-        debounceMs: 800
+        debounceMs: 200
         minIntervalMs: 3000
+        # 当前会话免打扰（默认 true）：窗口在前台且完成的会话正是正在查看的会话时静默，
+        # 切走窗口 / 看别的会话 / 没开对话页时照常提醒
+        quietOnViewing: true
+        # 长任务运行中提醒（默认 true）：只弹 Windows 通知、不响铃
+        runningNotify: true
+        runningFirstAfterMs: 180000   # 运行 3 分钟后首次提醒
+        runningIntervalMs: 300000     # 之后每 5 分钟提醒一次
+        # 用户提问提醒（默认 true）：Agent 调用 ask_user_question 等待回答时立即提醒
+        questionNotify: true
+        questionTitle: 'DSH 提问'    # 提问提醒的通知标题

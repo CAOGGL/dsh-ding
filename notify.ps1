@@ -68,10 +68,10 @@ public static extern int mciSendString(string command, System.Text.StringBuilder
                 # MCI 音量范围 0~1000；设置失败（不支持的驱动）时忽略，保持原始音量
                 [Dsh.Mci]::mciSendString("setaudio dshding volume to $([int]($Volume * 1000))", $sb, 256, [IntPtr]::Zero) | Out-Null
             }
-            [Dsh.Mci]::mciSendString("play dshding wait", $sb, 256, [IntPtr]::Zero) | Out-Null
-            [Dsh.Mci]::mciSendString("close dshding", $sb, 256, [IntPtr]::Zero) | Out-Null
+            # 异步播放（不带 wait）：立即返回，通知与提示音同时出现，不被 ding 尾音卡住
+            [Dsh.Mci]::mciSendString("play dshding", $sb, 256, [IntPtr]::Zero) | Out-Null
             $played = $true
-            Write-DingLog "sound: MCI played $soundPath (vol=$Volume)"
+            Write-DingLog "sound: MCI playing $soundPath (vol=$Volume)"
         } catch {
             Write-DingLog ("sound: MCI failed: " + $_.Exception.Message)
             try { [Dsh.Mci]::mciSendString("close dshding", $null, 0, [IntPtr]::Zero) | Out-Null } catch { }
@@ -89,8 +89,26 @@ public static extern int mciSendString(string command, System.Text.StringBuilder
     }
 }
 
-# ---------- 1.5) 试听模式：只出声，立即退出 ----------
-if ($SoundOnly) { exit 0 }
+# 等待 MCI 异步播放结束（最多 10 秒）并关闭设备。
+# MCI 设备是进程级资源：脚本退出会中断播放，所以必须等声音播完再退出。
+function Wait-DshDingSound {
+    if (-not $script:played) { return }
+    $sb2 = New-Object System.Text.StringBuilder 256
+    for ($i = 0; $i -lt 100; $i++) {
+        try {
+            [Dsh.Mci]::mciSendString("status dshding mode", $sb2, 256, [IntPtr]::Zero) | Out-Null
+            if ($sb2.ToString().ToLowerInvariant() -ne "playing") { break }
+        } catch { break }
+        Start-Sleep -Milliseconds 100
+    }
+    try { [Dsh.Mci]::mciSendString("close dshding", $sb2, 256, [IntPtr]::Zero) | Out-Null } catch { }
+}
+
+# ---------- 1.5) 试听模式：等声音播完再退出 ----------
+if ($SoundOnly) {
+    Wait-DshDingSound
+    exit 0
+}
 
 # ---------- 2) Windows 通知 ----------
 if (-not $NoToast) {
@@ -217,6 +235,8 @@ public static class DshDingAumid {
         $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
         if ($jumpUrl) {
             $baseB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($BaseUrl.TrimEnd('/'))).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+            # 点击通知正文 → dsh-ding:// 协议 → toast-activate.ps1 → 跳转对应会话
+            # （审批通知点击同样跳转到发起审批的会话，在 WebUI 里完成审批）
             $launch = 'dsh-ding://open/' + $jumpB64 + '/' + $baseB64
             $launchXml = $launch.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
             $xml.LoadXml("<toast activationType='protocol' launch='$launchXml'><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
@@ -277,3 +297,6 @@ public static class DshDingAumid {
         Write-DingLog "notify: done"
     }
 }
+
+# 通知已弹出，等提示音播完再退出（不阻塞通知显示）
+Wait-DshDingSound

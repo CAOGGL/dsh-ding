@@ -172,6 +172,9 @@ public static class DshDingAumid {
 
     # 2a2) 注册 dsh-ding:// 协议（HKCU，无需管理员）：toast 点击（activationType=protocol）
     #      与手动打开 dsh-ding:// 链接都走这里，路由到 toast-activate.ps1。
+    #      协议命令用 wscript 启动 VBS 启动器（wscript 是 GUI 子系统，全程无窗口），
+    #      避免 powershell.exe 控制台黑窗闪烁（ShellExecute 启动时 -WindowStyle Hidden 不彻底）。
+    $activateVbs = Join-Path $PSScriptRoot 'toast-activate.vbs'
     if (Test-Path -LiteralPath $activateScript) {
         try {
             $protoKey = 'HKCU:\Software\Classes\dsh-ding'
@@ -182,7 +185,11 @@ public static class DshDingAumid {
             }
             $cmdKey = "$protoKey\shell\open\command"
             if (-not (Test-Path $cmdKey)) { New-Item -Path $cmdKey -Force | Out-Null }
-            $cmd = '"' + $env:WINDIR + '\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -WindowStyle Hidden -File "' + $activateScript + '" "%1"'
+            if (Test-Path -LiteralPath $activateVbs) {
+                $cmd = '"' + $env:WINDIR + '\System32\wscript.exe" "' + $activateVbs + '" "%1"'
+            } else {
+                $cmd = '"' + $env:WINDIR + '\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -WindowStyle Hidden -File "' + $activateScript + '" "%1"'
+            }
             Set-ItemProperty -Path $cmdKey -Name '(Default)' -Value $cmd
         } catch { }
     }

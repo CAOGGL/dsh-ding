@@ -37,9 +37,14 @@ try {
     $sessionB64 = ""
     $baseB64 = ""
 
-    # 路径格式：/open/<u>/<b>
+    # 路径/authority 格式：/open/<u>/<b>
     $segments = @($parsed.AbsolutePath.Split('/') | Where-Object { $_ -ne "" })
-    if ($segments.Count -ge 3 -and $segments[0] -eq "open") {
+    if ($parsed.Host -eq "open" -and $segments.Count -ge 2) {
+        # dsh-ding://open/<u>/<b>：System.Uri 把 open 解析为 host，path 只剩 u/b
+        $sessionB64 = $segments[0]
+        $baseB64 = $segments[1]
+    } elseif ($segments.Count -ge 3 -and $segments[0] -eq "open") {
+        # dsh-ding:///open/<u>/<b>：open 在 path 首位
         $sessionB64 = $segments[1]
         $baseB64 = $segments[2]
     } else {

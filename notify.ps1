@@ -170,12 +170,16 @@ public static class DshDingAumid {
         }
     } catch { }
 
-    # 2a2) 注册 dsh-ding:// 协议（HKCU，无需管理员）：手动打开 dsh-ding:// 链接时的入口，
-    #      同样路由到 toast-activate.ps1（toast 点击本身不走协议，走 2a 的快捷方式传参）。
+    # 2a2) 注册 dsh-ding:// 协议（HKCU，无需管理员）：toast 点击（activationType=protocol）
+    #      与手动打开 dsh-ding:// 链接都走这里，路由到 toast-activate.ps1。
     if (Test-Path -LiteralPath $activateScript) {
         try {
             $protoKey = 'HKCU:\Software\Classes\dsh-ding'
             if (-not (Test-Path $protoKey)) { New-Item -Path $protoKey -Force | Out-Null }
+            # 标记为 URL 协议（缺失时 Windows 不识别自定义协议，点击无反应）
+            if (-not (Get-ItemProperty -Path $protoKey -Name 'URL Protocol' -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path $protoKey -Name 'URL Protocol' -Value '' -PropertyType String | Out-Null
+            }
             $cmdKey = "$protoKey\shell\open\command"
             if (-not (Test-Path $cmdKey)) { New-Item -Path $cmdKey -Force | Out-Null }
             $cmd = '"' + $env:WINDIR + '\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -WindowStyle Hidden -File "' + $activateScript + '" "%1"'
@@ -208,7 +212,7 @@ public static class DshDingAumid {
             $baseB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($BaseUrl.TrimEnd('/'))).TrimEnd('=').Replace('+', '-').Replace('/', '_')
             $launch = 'dsh-ding://open/' + $jumpB64 + '/' + $baseB64
             $launchXml = $launch.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
-            $xml.LoadXml("<toast launch='$launchXml'><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
+            $xml.LoadXml("<toast activationType='protocol' launch='$launchXml'><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
         } else {
             $xml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
         }

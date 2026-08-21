@@ -11,7 +11,8 @@ param(
     [switch]$NoToast,
     [switch]$SoundOnly,   # 仅播放提示音（试听用），不弹任何通知
     [string]$SessionId = "",  # 完成/运行中的会话 id：通知点击后跳转到该会话
-    [string]$BaseUrl = ""     # WebUI 地址（如 http://127.0.0.1:3080）
+    [string]$BaseUrl = "",    # WebUI 地址（如 http://127.0.0.1:3080）
+    [string]$AppName = ""    # 通知应用显示名（空则按语言使用默认名）
 )
 
 # 音量钳制到 0.0~1.0
@@ -33,7 +34,8 @@ function Resolve-SoundFile {
     $candidates = @()
     if ($Specified) { $candidates += $Specified }
     $candidates += (Join-Path (Get-Location) 'ding.mp3')   # 服务器工作目录
-    $candidates += (Join-Path $PSScriptRoot '..\ding.mp3') # 插件目录
+    $candidates += (Join-Path $PSScriptRoot 'ding.mp3')    # 插件自身目录（随包自带）
+    $candidates += (Join-Path $PSScriptRoot '..\ding.mp3') # 插件上级目录
     $candidates += (Join-Path $HOME 'ding.mp3')            # 用户主目录
     foreach ($c in $candidates) {
         if ($c -and (Test-Path -LiteralPath $c -PathType Leaf)) { return $c }
@@ -114,7 +116,15 @@ if ($SoundOnly) {
 if (-not $NoToast) {
     $shown = $false
     $AUMID = 'DshDing.Notifier'
-    $lnkPath = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\dsh-ding-notifier.lnk'
+    $shortcutBase = if ($AppName) { $AppName } else { 'dsh-ding-notifier' }
+    $invalidChars = [IO.Path]::GetInvalidFileNameChars()
+    foreach ($ch in $invalidChars) { $shortcutBase = $shortcutBase.Replace([string]$ch, '') }
+    if ([string]::IsNullOrWhiteSpace($shortcutBase)) { $shortcutBase = 'dsh-ding-notifier' }
+    $lnkPath = Join-Path $env:APPDATA ('Microsoft\Windows\Start Menu\Programs\' + $shortcutBase + '.lnk')
+    $oldLnkPath = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\dsh-ding-notifier.lnk'
+    if ($lnkPath -ne $oldLnkPath -and (Test-Path -LiteralPath $oldLnkPath)) {
+        Remove-Item -LiteralPath $oldLnkPath -Force -ErrorAction SilentlyContinue
+    }
 
     # 2a) 确保 AUMID 已注册：未注册的 appId 会被 Windows 静默丢弃（toast 调用了也不显示）。
     #     注册方式：开始菜单快捷方式 + System.AppUserModel.ID 属性。
@@ -124,7 +134,7 @@ if (-not $NoToast) {
     $activateScript = Join-Path $PSScriptRoot 'toast-activate.ps1'
     $lnkExists = Test-Path $lnkPath
     try {
-        $icoPath = Join-Path $PSScriptRoot '..\ds.ico'
+        $icoPath = Join-Path $PSScriptRoot 'ds.ico'
         $ws = New-Object -ComObject WScript.Shell
         $sc = $ws.CreateShortcut($lnkPath)
         $sc.TargetPath = "$env:WINDIR\System32\WindowsPowerShell\v1.0\powershell.exe"

@@ -24,6 +24,7 @@ A DSH host plugin that **notifies you when a conversation finishes**: whenever t
 - ❓ **用户提问提醒**：Agent 通过 `ask_user_question` 提问等待回答时立即提醒（文本区别于完成通知）
 - 🛡️ **工具审批提醒**：工具调用等待你批准（approval/request）时立即提醒，点击通知直达该会话，在 WebUI 里完成审批
 - 🛠 **高级设置弹窗**：右键菜单底部「⚙ 高级设置」打开页面内设置窗口，可改全部参数（通知开关/标题/时机毫秒/音量/自定义通知模板），**自定义模板支持参数引用**：`{title}` 会话标题、`{prefix}` 对话前缀、`{elapsed}` 耗时、`{question}` 问题文本、`{tool}` 工具名（审批模板）
+- 💾 **导入/导出配置**：右键菜单底部可**导出配置**（下载 JSON 文件）或**导入配置**（从 JSON 恢复全部设置）
 - 🌐 **双语**：通知正文与标题、面板文案跟随 WebUI 界面语言（中/英）
 - 🎯 **时机精准**：以会话 turn 是否真正结束判断完成（排除回复中途的短暂空闲），完成通知带耗时
 - 🧹 **不误报**：自动跳过子代理（subagent）的完成事件（那只是主对话的中间过程）
@@ -75,7 +76,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
 | `sound` | `true` | 播放提示音 |
-| `soundFile` | 空 | 提示音文件路径（mp3/wav/mid/wma/aac）。留空时自动在 服务器工作目录 / 插件目录 / 用户主目录 找 `ding.mp3`，找不到则回退系统"叮咚"双音 |
+| `soundFile` | 空 | 提示音文件路径（mp3/wav/mid/wma/aac）。留空时自动在 服务器工作目录 / 插件目录（**自带 ding.mp3**）/ 用户主目录 找 `ding.mp3`，找不到则回退系统"叮咚"双音 |
 | `volume` | `1.0` | 提示音音量（0.0 ~ 1.0，1.0 为原始音量，如 `0.5` 即一半音量） |
 | `balloon` | `true` | 显示 Windows 通知 |
 | `title` | `DSH 完成` | 通知标题 |
@@ -95,6 +96,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 | `approvalNotify` | `true` | 工具审批提醒：工具调用等待你批准时立即提醒 |
 | `approvalTitle` | `DSH 审批` | 审批提醒的通知标题 |
 | `approvalTemplate` | 空 | 自定义审批通知文本（支持 `{title}`/`{prefix}`/`{tool}`，留空用默认） |
+| `notifierName` | 空 | 通知应用显示名（Windows 通知设置里显示的名称）。留空时跟随 WebUI 语言自动切换：中文「DSH叮当通知」，英文「dsh-ding-notifier」；填写后固定使用该名称 |
 
 完整示例：
 
@@ -124,7 +126,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 | --- | --- |
 | 单击铃铛 | 快速开关提示音 |
 | 悬停铃铛 | 铃铛**正左侧**滑出音量条（行内元素带宽度动画，同行元素自动左移）；拖动松手自动试听 |
-| 右键铃铛 | 打开通知设置面板：**提示音**/**气泡通知**开关（两个都关 = 对话完成时无任何提示）、**当前会话免打扰**（正在查看的会话完成时不提醒，别的会话完成/切走后照常提醒）、**运行中提醒**（任务运行中超 3 分钟后每 5 分钟提醒一次，仅通知）、**提问提醒**（Agent 提问等待回答时立即提醒），下方可选音效（内置叮咚 / 已上传的音频）或上传新音效（mp3/wav/mid/wma/aac/m4a/ogg/flac，存到 `data/sounds/`）；面板底部 **⚙ 高级设置** 进入全部参数编辑（通知开关/标题/时机毫秒/音量，即时保存） |
+| 右键铃铛 | 打开通知设置面板：**提示音**/**气泡通知**开关（两个都关 = 对话完成时无任何提示）、**当前会话免打扰**（正在查看的会话完成时不提醒，别的会话完成/切走后照常提醒）、**运行中提醒**（任务运行中超 3 分钟后每 5 分钟提醒一次，仅通知）、**提问提醒**（Agent 提问等待回答时立即提醒），下方可选音效（内置叮咚 / 已上传的音频）或上传新音效（mp3/wav/mid/wma/aac/m4a/ogg/flac，存到 `data/sounds/`）；面板底部 **⚙ 高级设置** 进入全部参数编辑（通知开关/标题/时机毫秒/音量，即时保存）；底部还有 **导出配置 / 导入配置**（下载/恢复 JSON 配置） |
 
 ### 卸载
 
@@ -133,6 +135,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 
 ### 更新日志
 
+- **v1.0.2**（2026-08-21）：**铃声试听**——右键菜单铃声列表每项右侧新增 ▶ 播放按钮，可单独试听每个铃声（不切换当前铃声），`GET /dsh-ding/audio` 支持 `?file=<id>` 指定音效；**配置导入/导出**——右键菜单底部新增「导出配置 / 导入配置」，可把当前配置下载为 JSON 或从 JSON 恢复全部设置；**内置 ding.mp3**——`ding.mp3` 随插件包分发，`notify.ps1` 搜索链新增插件自身目录，不再依赖启动目录或用户主目录里存在 ding.mp3；**四种通知测试按钮**——高级设置页新增完成/运行中/提问/审批四个测试按钮，点击立即发出对应类型的真实通知，点击通知跳转到测试结果页，并记录本次测试使用的配置；**通知应用名可改**——高级设置新增「通知应用名」，留空时跟随 WebUI 中英文自动切换（中文默认：DSH叮当通知，英文默认：dsh-ding-notifier），填写后固定使用
 - **v1.0.1**（2026-08-17）：**工具审批提醒**——工具调用等待你批准（`approval/request`）时播放提示音并弹出 Windows 审批通知（标题与文案可自定义，支持 `{tool}` 工具名参数）；点击通知直达发起审批的会话，在 WebUI 里完成批准/拒绝；新增配置项 `approvalNotify` / `approvalTitle` / `approvalTemplate`（可在高级设置里编辑）；**提示音异步播放**——提示音与通知同时弹出，不再等待音效放完（修复音效尾音长时通知卡顿的问题）
 - **v1.0.0**（2026-08-15，08-16/08-17 更新）：**提醒体系完整版**——① **当前会话免打扰**（默认开）：窗口在前台且完成的会话正是你正在查看的会话时静默；切走窗口、看别的会话、或没开对话页时照常提醒（浏览器上报前台状态与当前会话，新增 `POST /dsh-ding/presence`）；② **完成通知带耗时**：通知文本显示"用时 X 分 Y 秒"（宿主自动记录任务开始时间）；③ **长任务运行中提醒**（默认开）：任务运行超 3 分钟后首次提醒、之后每 5 分钟一次，只弹通知不响铃（尊重"完成前不打扰"），提醒文本含已运行时长；④ **点击通知跳转会话**：点击 Windows 通知自动打开浏览器直达对应对话（`dsh-ding://` 协议激活 + `toast-activate.ps1` + `?dingOpen=` 深链）；⑤ **用户提问提醒**（默认开）：Agent 通过 `ask_user_question` 提问等待回答时立即提醒；⑥ **高级设置弹窗**：右键菜单「⚙ 高级设置」打开页面内设置窗口（遮罩 + 居中面板），全部参数运行时编辑（通知开关/标题/时机毫秒/音量/子代理完成通知）；⑦ **自定义通知模板**：完成/运行中/提问通知文本可自定义，支持 `{title}`/`{prefix}`/`{elapsed}`/`{question}` 参数引用；⑧ **双语通知**：通知正文与标题跟随 WebUI 界面语言（DSH 完成/DSH Done、DSH 提问/DSH Question、DSH 运行中/DSH Running），内置音效名跟随语言；⑨ **完成判定修复**：以 turn 真正结束 + 相位过滤判断完成，修复回复中途误通知与完成不通知的问题。**（08-16 更新）**：⑩ **运行中提醒独立标题**——运行中通知标题由「DSH 完成」改为「DSH 运行中」，并新增 `runningTitle` 配置项与高级设置「运行中通知标题」输入框；⑪ **运行中通知模板**——新增 `runningTemplate` 配置项与高级设置「运行中通知模板」编辑框；⑫ **标题框语言化**——标题输入框在未自定义时随 WebUI 语言显示对应默认标题（中文 DSH 完成/DSH 运行中/DSH 提问，英文 DSH Done/DSH Running/DSH Question）；⑬ **设置文件热重载**——直接编辑 `data/dsh-ding.json` 保存后即时生效，无需重启。**（08-17 更新）**：⑭ **点击跳转修复**——Windows 11 对非打包应用的 toast 点击（foreground 激活）失效，改为 `activationType="protocol"` 协议激活，并补全 `URL Protocol` 注册标志、修复 launch 参数解析（`dsh-ding://open/<u>/<b>` 中 open 被解析为 host 的情况）、浏览器端深链加自动重试；⑮ **跳转黑窗修复**——协议命令改用 wscript + `toast-activate.vbs` 无窗口启动器（避免 powershell 控制台黑窗闪烁）。新增配置项：`quietOnViewing` / `runningNotify` / `runningFirstAfterMs` / `runningIntervalMs` / `questionNotify` / `questionTitle` / `runningTitle` / `doneTemplate` / `runningTemplate` / `questionTemplate`，全部参数可在高级设置窗口运行时修改
 - **v0.4.3**（2026-08-14）：滑杆旋钮改为**亮色黑球 / 暗色白球**（跟随 WebUI 主题实时切换）；移除音量条标题行；菜单文案改为跟随 **WebUI 语言设置**（`ctx.locale`，切换语言即时生效，不再是页面 lang）
@@ -166,6 +169,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 - ❓ **Question reminder**: alerts immediately when the agent asks you via `ask_user_question` and waits (text differs from completion)
 - 🛡️ **Tool approval reminder**: alerts immediately when a tool call waits for your approval (`approval/request`); clicking the notification jumps to that conversation, where you approve or reject in the WebUI
 - 🛠 **Advanced settings window**: the "⚙ Advanced settings" entry in the right-click menu opens an in-page settings window with every parameter (notification toggles, titles, timing in ms, volume, custom notification templates). **Templates support placeholders**: `{title}` session title, `{prefix}` conversation prefix, `{elapsed}` elapsed time, `{question}` question text, `{tool}` tool name (approval template)
+- 💾 **Export/import config**: at the bottom of the right-click menu you can **export config** (download a JSON file) or **import config** (restore all settings from JSON)
 - 🌐 **Bilingual**: notification text & title and panel copy follow the WebUI language (zh/en)
 - 🎯 **Precise timing**: completion is judged by the turn actually ending (phase filter excludes mid-reply pauses); completion text includes the elapsed time
 - 🧹 **No false positives**: ignores subagent completion events (they are just intermediate steps of the main conversation)
@@ -217,7 +221,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 | Option | Default | Description |
 | --- | --- | --- |
 | `sound` | `true` | Play the alert sound |
-| `soundFile` | empty | Path to the sound file (mp3/wav/mid/wma/aac). When empty, the script looks for `ding.mp3` in the server working directory / plugin directory / user home; falls back to the system beep if not found |
+| `soundFile` | empty | Path to the sound file (mp3/wav/mid/wma/aac). When empty, the script looks for `ding.mp3` in the server working directory / plugin directory (**bundled ding.mp3**) / user home; falls back to the system beep if not found |
 | `volume` | `1.0` | Alert sound volume (0.0 ~ 1.0; `1.0` = original volume, e.g. `0.5` = half volume) |
 | `balloon` | `true` | Show the Windows notification |
 | `title` | `DSH Done` | Notification title |
@@ -237,6 +241,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 | `approvalNotify` | `true` | Tool approval reminder: alert when a tool call waits for your approval |
 | `approvalTitle` | `DSH Approval` | Notification title for approval reminders |
 | `approvalTemplate` | empty | Custom approval text (`{title}`/`{prefix}`/`{tool}`; empty = default) |
+| `notifierName` | empty | Notification app display name (shown in Windows notification settings). Leave empty to follow the WebUI language: Chinese "DSH叮当通知", English "dsh-ding-notifier"; enter a name to pin it |
 
 Full example:
 
@@ -266,7 +271,7 @@ The bell in the conversation header saves every change immediately to `$DSH_HOME
 | --- | --- |
 | Click the bell | Quickly toggle the sound |
 | Hover the bell | A volume bar slides out on the **left** of the bell (in-flow width animation; the other items in the row shift left automatically); releasing the slider previews the sound once |
-| Right-click the bell | Notification settings panel: **Sound** / **Toast** toggles (both off = no notification when a conversation finishes), **Quiet on current** (skip when the session you are viewing finishes; other sessions and away-window still remind), **While running** (progress toast every 5 min after 3 min, toast only), **While asked** (alert when the agent asks you a question and waits), plus the sound picker (built-in ding / your uploaded files) and upload (mp3/wav/mid/wma/aac/m4a/ogg/flac, stored in `data/sounds/`); the **⚙ Advanced settings** entry at the bottom opens the full parameter editor (notification toggles, titles, timing in ms, volume — saved instantly) |
+| Right-click the bell | Notification settings panel: **Sound** / **Toast** toggles (both off = no notification when a conversation finishes), **Quiet on current** (skip when the session you are viewing finishes; other sessions and away-window still remind), **While running** (progress toast every 5 min after 3 min, toast only), **While asked** (alert when the agent asks you a question and waits), plus the sound picker (built-in ding / your uploaded files) and upload (mp3/wav/mid/wma/aac/m4a/ogg/flac, stored in `data/sounds/`); the **⚙ Advanced settings** entry at the bottom opens the full parameter editor (notification toggles, titles, timing in ms, volume — saved instantly); the bottom also has **Export config / Import config** (download/restore JSON settings) |
 
 ### Uninstall
 
@@ -275,6 +280,7 @@ The bell in the conversation header saves every change immediately to `$DSH_HOME
 
 ### Changelog
 
+- **v1.0.2** (2026-08-21): **Per-sound preview** — every sound item in the right-click menu now has a ▶ play button to preview that sound without switching; `GET /dsh-ding/audio` supports `?file=<id>`. **Export/import config** — new **Export config / Import config** entries at the bottom of the right-click menu (download/restore JSON settings). **Bundled ding.mp3** — the plugin now ships its own `ding.mp3`; `notify.ps1` searches the plugin directory, so it no longer depends on the start directory or home directory containing ding.mp3; **Four notification test buttons** — the advanced settings page gains four test buttons (completion/running/question/approval) that immediately send a real notification of that type; clicking the toast opens a test result page and records the configuration used for the test; **Renamable notification app name** — a new "Notification app name" field in advanced settings; leave it empty to follow the WebUI language automatically (zh default: DSH叮当通知, en default: dsh-ding-notifier), or enter a name to pin it
 - **v1.0.1** (2026-08-17): **Tool approval reminder** — when a tool call waits for your approval (`approval/request`), the plugin plays the sound and shows an approval notification (title & text customizable, `{tool}` placeholder supported); clicking the notification jumps to the conversation that requested approval, where you approve or reject in the WebUI. New config keys: `approvalNotify` / `approvalTitle` / `approvalTemplate` (editable in Advanced settings). **Async sound** — the alert sound now plays in parallel with the notification instead of blocking it until the sound file finishes (fixes notification lag with long tail sounds)
 - **v1.0.0** (2026-08-15, updated 08-16): **Complete reminder system** — ① **Quiet on current** (default on): silent while the window is focused AND the finishing session is the one you are viewing; still reminds when you switch away, view another session, or no conversation page is open (the browser reports foreground state and the current session via the new `POST /dsh-ding/presence`); ② **Completion text with elapsed time**: the notification now shows "took Xm Ys" (the host tracks when the task started); ③ **Long-task progress reminder** (default on): first toast after 3 minutes, then every 5 minutes — toast only, no sound (respects "no noise before the task finishes"), with the elapsed time in the text; ④ **Click the notification to jump to the conversation**: opens the browser and lands directly on the finished session (shortcut activation + `dsh-ding://` protocol + `?dingOpen=` deep link, new `toast-activate.ps1`); ⑤ **Question reminder** (default on): alerts immediately when the agent asks you via `ask_user_question` and waits; ⑥ **Advanced settings window**: the "⚙ Advanced settings" entry opens an in-page modal window (overlay + centered panel) with every parameter editable at runtime (notification toggles, titles, timing in ms, volume, subagent completion); ⑦ **Custom notification templates**: completion and question text are customizable with `{title}`/`{prefix}`/`{elapsed}`/`{question}` placeholders; ⑧ **Bilingual notifications**: text and title follow the WebUI language (DSH 完成/DSH Done, DSH 提问/DSH Question, DSH 运行中/DSH Running), built-in sound name follows too; ⑨ **Completion detection fix**: completion is judged by the turn actually ending plus phase filtering — fixes mid-reply false notifications and missed completion notifications. **(2026-08-16 update)**: ⑩ **Dedicated progress-reminder title** — the progress toast title changed from "DSH 完成" to "DSH 运行中" and a new `runningTitle` config key plus an advanced-settings "Running title" input were added; ⑪ **Progress-reminder template** — new `runningTemplate` config key plus an advanced-settings "Progress template" editor (`{title}`/`{prefix}`/`{elapsed}`); ⑫ **Localized title inputs** — when a title input still holds its default value, the advanced settings show the localized default (DSH 完成/DSH 运行中/DSH 提问 in Chinese, DSH Done/DSH Running/DSH Question in English) and switch with the WebUI language. New config keys: `quietOnViewing` / `runningNotify` / `runningFirstAfterMs` / `runningIntervalMs` / `questionNotify` / `questionTitle` / `runningTitle` / `doneTemplate` / `runningTemplate` / `questionTemplate`, all editable at runtime in the advanced settings window
 - **v0.4.3** (2026-08-14): Slider knob is now **black in light mode / white in dark mode** (follows the WebUI theme live); the volume-bar title row was removed; the menu copy now follows the **WebUI language setting** (`ctx.locale`, switches instantly, no longer tied to the page lang)

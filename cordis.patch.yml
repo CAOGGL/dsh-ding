@@ -22,3 +22,5 @@
         # 用户提问提醒（默认 true）：Agent 调用 ask_user_question 等待回答时立即提醒
         questionNotify: true
         questionTitle: 'DSH 提问'    # 提问提醒的通知标题
+        # 通知应用显示名（空=跟随语言自动切换：中文 DSH叮当通知 / 英文 dsh-ding-notifier）
+        notifierName: ''

@@ -25,6 +25,10 @@ A DSH host plugin that **notifies you when a conversation finishes**: whenever t
 - 🛡️ **工具审批提醒**：工具调用等待你批准（approval/request）时立即提醒，点击通知直达该会话，在 WebUI 里完成审批
 - 🛠 **高级设置弹窗**：右键菜单底部「⚙ 高级设置」打开页面内设置窗口，可改全部参数（通知开关/标题/时机毫秒/音量/自定义通知模板），**自定义模板支持参数引用**：`{title}` 会话标题、`{prefix}` 对话前缀、`{elapsed}` 耗时、`{question}` 问题文本、`{tool}` 工具名（审批模板）
 - 💾 **导入/导出配置**：右键菜单底部可**导出配置**（下载 JSON 文件）或**导入配置**（从 JSON 恢复全部设置）
+- ▶ **铃声试听**：右键菜单铃声列表每项右侧有播放按钮，可单独试听每个铃声（不切换当前铃声）
+- 🧪 **通知测试按钮**：高级设置页提供完成 / 运行中 / 提问 / 审批 4 个测试按钮，点击立即弹出对应类型的真实通知，点击通知打开测试结果页
+- 🏷️ **通知应用名可改**：高级设置可自定义通知应用名；留空时跟随 WebUI 中英文自动切换（中文：DSH叮当通知，英文：dsh-ding-notifier）
+- 📦 **内置 ding.mp3**：提示音文件随插件包分发，不再依赖启动目录或主目录存在 ding.mp3
 - 🌐 **双语**：通知正文与标题、面板文案跟随 WebUI 界面语言（中/英）
 - 🎯 **时机精准**：以会话 turn 是否真正结束判断完成（排除回复中途的短暂空闲），完成通知带耗时
 - 🧹 **不误报**：自动跳过子代理（subagent）的完成事件（那只是主对话的中间过程）
@@ -170,6 +174,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 - 🛡️ **Tool approval reminder**: alerts immediately when a tool call waits for your approval (`approval/request`); clicking the notification jumps to that conversation, where you approve or reject in the WebUI
 - 🛠 **Advanced settings window**: the "⚙ Advanced settings" entry in the right-click menu opens an in-page settings window with every parameter (notification toggles, titles, timing in ms, volume, custom notification templates). **Templates support placeholders**: `{title}` session title, `{prefix}` conversation prefix, `{elapsed}` elapsed time, `{question}` question text, `{tool}` tool name (approval template)
 - 💾 **Export/import config**: at the bottom of the right-click menu you can **export config** (download a JSON file) or **import config** (restore all settings from JSON)
+- ▶ **Per-sound preview**: every sound item in the right-click menu has a play button to preview that sound without switching
+- 🧪 **Notification test buttons**: the advanced settings page provides 4 test buttons (completion / running / question / approval) that immediately send a real notification of that type; clicking the toast opens a test result page
+- 🏷️ **Renamable notification app name**: advanced settings lets you rename the notification app name; leave it empty to follow the WebUI language automatically (zh: DSH叮当通知, en: dsh-ding-notifier)
+- 📦 **Bundled ding.mp3**: the alert sound ships with the plugin package, so it no longer depends on the start directory or home directory containing ding.mp3
 - 🌐 **Bilingual**: notification text & title and panel copy follow the WebUI language (zh/en)
 - 🎯 **Precise timing**: completion is judged by the turn actually ending (phase filter excludes mid-reply pauses); completion text includes the elapsed time
 - 🧹 **No false positives**: ignores subagent completion events (they are just intermediate steps of the main conversation)

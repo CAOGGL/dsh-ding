@@ -224,7 +224,7 @@ public static class DshDingAumid {
     }
 
     # 通知点击跳转目标：BaseUrl + dingOpen=<base64url(sessionId)>
-    # （浏览器端插件解析该参数后 sessions.open() 直达会话）
+    # （浏览器端插件解析该参数后切到对应会话）
     $jumpB64 = ''
     $jumpUrl = ''
     if ($SessionId -and $BaseUrl) {
@@ -232,6 +232,23 @@ public static class DshDingAumid {
             $jumpB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($SessionId)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
             $jumpUrl = $BaseUrl.TrimEnd('/') + '/?dingOpen=' + $jumpB64
         } catch { }
+    }
+
+    # 点击激活 URI：dsh-ding://open/<u>/<b>[/<k>]（toast/气泡共用，交给 toast-activate.ps1 处理）
+    #   k = base64url(desktop|web)：桌面版走应用内直达，命令行 dsh web 走浏览器跳转
+    $launch = ''
+    if ($jumpUrl) {
+        try {
+            $baseB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($BaseUrl.TrimEnd('/'))).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+            $launch = 'dsh-ding://open/' + $jumpB64 + '/' + $baseB64
+            if ($HostKind) {
+                $kindB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($HostKind)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+                $launch = $launch + '/' + $kindB64
+            }
+            Write-DingLog ("launch uri=[{0}] hostKind=[{1}]" -f $launch, $HostKind)
+        } catch {
+            $launch = ''
+        }
     }
 
     # 2b) 首选：WinRT 原生 Toast（使用已注册的 AUMID；注册失败则退回无 AUMID）。
@@ -244,20 +261,10 @@ public static class DshDingAumid {
         [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
         [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
         $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-        if ($jumpUrl) {
-            $baseB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($BaseUrl.TrimEnd('/'))).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+        if ($launch) {
             # 点击通知正文 → dsh-ding:// 协议 → toast-activate.ps1 → 跳转对应会话
             # （审批通知点击同样跳转到发起审批的会话，在 WebUI 里完成审批）
-            $launch = 'dsh-ding://open/' + $jumpB64 + '/' + $baseB64
-            # 第三段：宿主类型（desktop/web），让点击处理脚本知道该走应用内直达还是浏览器跳转
-            if ($HostKind) {
-                try {
-                    $kindB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($HostKind)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
-                    $launch = $launch + '/' + $kindB64
-                } catch { }
-            }
             $launchXml = $launch.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
-            Write-DingLog ("toast: launch=[{0}] hostKind=[{1}]" -f $launch, $HostKind)
             $xml.LoadXml("<toast activationType='protocol' launch='$launchXml'><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
         } else {
             $xml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
@@ -273,7 +280,7 @@ public static class DshDingAumid {
     }
 
     # 2c) 兜底：经典气泡通知（NotifyIcon，通知区域 + 操作中心）。
-    #     点击气泡跳转到对应会话（BalloonTipClicked 事件）。
+    #     点击气泡同样走 toast-activate.ps1（复用同一套桌面版/浏览器判定，避免这里又回到打开浏览器）。
     if (-not $shown) {
         try {
             Add-Type -AssemblyName System.Windows.Forms
@@ -287,10 +294,19 @@ public static class DshDingAumid {
             if ($jumpUrl) {
                 # 点击跳转注册放独立 try：注册失败不能连累气泡本身显示
                 try {
+                    $script:dingActivateScript = Join-Path $PSScriptRoot 'toast-activate.ps1'
+                    $script:dingLaunch = $launch
                     $script:dingJumpUrl = $jumpUrl
                     $notify.add_BalloonTipClicked([System.Windows.Forms.EventHandler]{
                         param($sender, $eventArgs)
-                        if ($script:dingJumpUrl) { Start-Process $script:dingJumpUrl }
+                        try {
+                            if ($script:dingLaunch -and (Test-Path -LiteralPath $script:dingActivateScript)) {
+                                $argLine = '-NoProfile -ExecutionPolicy Bypass -File "' + $script:dingActivateScript + '" -Uri "' + $script:dingLaunch + '"'
+                                Start-Process -FilePath 'powershell.exe' -ArgumentList $argLine -WindowStyle Hidden
+                            } elseif ($script:dingJumpUrl) {
+                                Start-Process $script:dingJumpUrl
+                            }
+                        } catch { }
                     })
                 } catch { }
             }

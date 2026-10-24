@@ -38,19 +38,33 @@ A DSH host plugin that **notifies you when a conversation finishes**: whenever t
 
 `$DSH_HOME` 默认为 `~/.dsh`。
 
-**方法 A：一行命令（推荐，bundle 安装）**
+**方法 A：npm 安装（推荐）**
+
+```bash
+dsh plugin --profile web add dsh-ding
+```
+
+也可以直接在项目里装：
+
+```bash
+npm install dsh-ding
+```
+
+装完**重启 `dsh web`** 生效。已发布版本见 https://www.npmjs.com/package/dsh-ding 。
+
+**方法 B：从 GitHub 安装（bundle）**
 
 ```bash
 dsh plugin --profile web add github:CAOGGL/dsh-ding
 ```
 
-装完**重启 `dsh web`** 生效（依赖 pnpm，`npm install -g pnpm` 即可）。本插件也支持 insert 行挂载（改配置即时生效），见方法 C。
+依赖 pnpm（`npm install -g pnpm` 即可）。本插件也支持 insert 行挂载（改配置即时生效），见方法 D。
 
-**方法 B：插件市场**
+**方法 C：插件市场**
 
 设置 → 插件市场 → 搜索 `dsh-ding` → 一键安装（已收录于 awesome-dsh-plugin，市场目录每日刷新后出现）。
 
-**方法 C：手动放置（无需 pnpm）**
+**方法 D：手动放置（无需 pnpm）**
 
 1. 把本仓库克隆（或下载）到：`$DSH_HOME/profiles/node_modules/dsh-ding/`
 2. 在 profile 的用户补丁 `$DSH_HOME/profiles/web/cordis.patch.yml`（其他 profile 同理）追加：
@@ -66,8 +80,6 @@ dsh plugin --profile web add github:CAOGGL/dsh-ding
 ```
 
 3. 保存即生效（补丁文件是热监控的）；插件代码本身的改动需要重启服务才生效。
-
-> npm（`dsh plugin --profile web add dsh-ding`）：即将上线，上线后安装更快。
 
 **验证**：对话完成后应听到提示音并看到通知；也可以先单独测试通知脚本：
 
@@ -188,19 +200,33 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.dsh\profi
 
 `$DSH_HOME` defaults to `~/.dsh`.
 
-**Method A: one-line install (recommended, bundle)**
+**Method A: npm install (recommended)**
+
+```bash
+dsh plugin --profile web add dsh-ding
+```
+
+Or install it in your project:
+
+```bash
+npm install dsh-ding
+```
+
+Then **restart `dsh web`**. Published versions: https://www.npmjs.com/package/dsh-ding
+
+**Method B: install from GitHub (bundle)**
 
 ```bash
 dsh plugin --profile web add github:CAOGGL/dsh-ding
 ```
 
-Then **restart `dsh web`** (requires pnpm — `npm install -g pnpm`). The plugin also supports insert-row mounting with live config reload (see Method C).
+Requires pnpm (`npm install -g pnpm`). The plugin also supports insert-row mounting with live config reload (see Method D).
 
-**Method B: plugin market**
+**Method C: plugin market**
 
 Settings → Plugin Market → search `dsh-ding` → one-click install (listed in awesome-dsh-plugin; the market catalog refreshes daily).
 
-**Method C: manual placement (no pnpm needed)**
+**Method D: manual placement (no pnpm needed)**
 
 1. Clone (or download) this repo to: `$DSH_HOME/profiles/node_modules/dsh-ding/`
 2. Append to your profile's user patch file `$DSH_HOME/profiles/web/cordis.patch.yml` (same for other profiles):
@@ -216,8 +242,6 @@ Settings → Plugin Market → search `dsh-ding` → one-click install (listed i
 ```
 
 3. It takes effect immediately on save (the patch file is hot-watched). Changes to the plugin code itself require a service restart.
-
-> npm (`dsh plugin --profile web add dsh-ding`): coming soon — faster installs once published.
 
 **Verification**: finish a conversation and you should hear the sound and see the notification. You can also test the notification script standalone:
 

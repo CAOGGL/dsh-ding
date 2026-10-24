@@ -12,6 +12,7 @@ param(
     [switch]$SoundOnly,   # 仅播放提示音（试听用），不弹任何通知
     [string]$SessionId = "",  # 完成/运行中的会话 id：通知点击后跳转到该会话
     [string]$BaseUrl = "",    # WebUI 地址（如 http://127.0.0.1:3080）
+    [string]$HostKind = "",   # 宿主类型：desktop（桌面版，点击走应用内直达）/ web（命令行 dsh web）
     [string]$AppName = ""    # 通知应用显示名（空则按语言使用默认名）
 )
 
@@ -248,7 +249,15 @@ public static class DshDingAumid {
             # 点击通知正文 → dsh-ding:// 协议 → toast-activate.ps1 → 跳转对应会话
             # （审批通知点击同样跳转到发起审批的会话，在 WebUI 里完成审批）
             $launch = 'dsh-ding://open/' + $jumpB64 + '/' + $baseB64
+            # 第三段：宿主类型（desktop/web），让点击处理脚本知道该走应用内直达还是浏览器跳转
+            if ($HostKind) {
+                try {
+                    $kindB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($HostKind)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+                    $launch = $launch + '/' + $kindB64
+                } catch { }
+            }
             $launchXml = $launch.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
+            Write-DingLog ("toast: launch=[{0}] hostKind=[{1}]" -f $launch, $HostKind)
             $xml.LoadXml("<toast activationType='protocol' launch='$launchXml'><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")
         } else {
             $xml.LoadXml("<toast><visual><binding template='ToastGeneric'><text>$escapedTitle</text><text>$escapedText</text></binding></visual></toast>")

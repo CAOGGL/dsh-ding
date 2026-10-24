@@ -30,25 +30,49 @@ function ConvertFrom-Base64Url {
     }
 }
 
-if ([string]::IsNullOrEmpty($Uri)) { exit 0 }
+# 兜底：按 baseUrl 的监听端口查进程名判断宿主类型（旧通知没有第三段时用）
+#   桌面版监听进程为 "DeepSeek Harness"，命令行 dsh web 为 "node"
+function Get-HostKind {
+    param([string]$BaseUrl)
+    try {
+        $uri = New-Object System.Uri $BaseUrl
+        $port = $uri.Port
+        if ($port -le 0) { return "" }
+        $ownerPid = 0
+        foreach ($line in (netstat -ano 2>$null)) {
+            if ($line -match ":$port\s+\S+\s+LISTENING\s+(\d+)") { $ownerPid = [int]$matches[1]; break }
+        }
+        if ($ownerPid -le 0) { return "" }
+        $proc = Get-Process -Id $ownerPid -ErrorAction SilentlyContinue
+        if (-not $proc) { return "" }
+        if ($proc.ProcessName -match 'DeepSeek.*Harness') { return 'desktop' }
+        return 'web'
+    } catch {
+        return ""
+    }
+}
 
+if ([string]::IsNullOrEmpty($Uri)) { exit 0 }
 try {
     $parsed = New-Object System.Uri $Uri
     $sessionB64 = ""
     $baseB64 = ""
+    $kindB64 = ""
 
-    # 路径/authority 格式：/open/<u>/<b>
+    # 路径/authority 格式：/open/<u>/<b>[/<k>]
     $segments = @($parsed.AbsolutePath.Split('/') | Where-Object { $_ -ne "" })
     if ($parsed.Host -eq "open" -and $segments.Count -ge 2) {
-        # dsh-ding://open/<u>/<b>：System.Uri 把 open 解析为 host，path 只剩 u/b
+        # dsh-ding://open/<u>/<b>：System.Uri 把 open 解析为 host，path 只剩 u/b[/k]
         $sessionB64 = $segments[0]
         $baseB64 = $segments[1]
+        if ($segments.Count -ge 3) { $kindB64 = $segments[2] }
     } elseif ($segments.Count -ge 3 -and $segments[0] -eq "open") {
-        # dsh-ding:///open/<u>/<b>：open 在 path 首位
+        # dsh-ding:///open/<u>/<b>[/<k>]：open 在 path 首位
         $sessionB64 = $segments[1]
         $baseB64 = $segments[2]
+        if ($segments.Count -ge 4) { $kindB64 = $segments[3] }
     } else {
-        # 兼容查询格式：?u=<u>&b=<b>
+        # 兼容查询格式：?u=<u>&b=<b>&k=<k>
         $query = $parsed.Query.TrimStart('?')
         $params = @{}
         foreach ($pair in $query.Split('&')) {
@@ -58,16 +82,38 @@ try {
         }
         if ($params.ContainsKey('u')) { $sessionB64 = $params['u'] }
         if ($params.ContainsKey('b')) { $baseB64 = $params['b'] }
+        if ($params.ContainsKey('k')) { $kindB64 = $params['k'] }
     }
 
     $sessionId = ConvertFrom-Base64Url $sessionB64
     $baseUrl   = ConvertFrom-Base64Url $baseB64
+    $hostKind  = ConvertFrom-Base64Url $kindB64
 
     if ($baseUrl -and $sessionId) {
+        # 宿主类型优先用宿主自己上报的（dsh-ding:// 第三段）：
+        #   desktop = 桌面版，WebUI 带 launch token 认证，浏览器打开会被 401 拦截 → 应用内直达
+        #   web     = 命令行 dsh web，保持原来的浏览器跳转
+        # 旧通知（无第三段）时按端口查监听进程名兜底。
+        if (-not $hostKind) { $hostKind = Get-HostKind $baseUrl }
+        if ($hostKind -eq 'desktop') {
+            $activateUrl = $baseUrl.TrimEnd('/') + '/dsh-ding/activate'
+            $pushed = $false
+            try {
+                $payload = @{ session = $sessionId } | ConvertTo-Json -Compress
+                Invoke-RestMethod -Uri $activateUrl -Method Post -ContentType 'application/json' -Body $payload -TimeoutSec 5 | Out-Null
+                $pushed = $true
+            } catch { }
+            try {
+                Add-Content -LiteralPath $actLog -Value ("[{0}] desktop host: activate pushed={1}; focusing window" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $pushed) -ErrorAction Stop
+            } catch { }
+            # 唤起并聚焦桌面版主窗口（dsh:// 由桌面版注册；已在运行时单实例机制会聚焦原窗口）
+            try { Start-Process 'dsh://open' } catch { }
+            exit 0
+        }
         # 打开 WebUI 并携带 dingOpen 参数（base64url 只含安全字符，可直接拼进 URL）
         $target = $baseUrl.TrimEnd('/') + '/?dingOpen=' + $sessionB64
         try {
-            Add-Content -LiteralPath $actLog -Value ("[{0}] opening [{1}]" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $target) -ErrorAction Stop
+            Add-Content -LiteralPath $actLog -Value ("[{0}] opening [{1}] (kind={2})" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $target, $hostKind) -ErrorAction Stop
         } catch { }
         Start-Process $target
     } else {
